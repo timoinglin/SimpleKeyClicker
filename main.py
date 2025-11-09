@@ -14,6 +14,16 @@ import pyautogui
 from PIL import ImageGrab
 from pynput import mouse
 
+# Remove automatic pause between calls done by pyautogui/pydirectinput
+try:
+    pydirectinput.PAUSE = 0
+except Exception:
+    pass
+try:
+    pyautogui.PAUSE = 0
+except Exception:
+    pass
+
 def resource_path(relative_path):
     """Get absolute path to resource, works for dev and PyInstaller."""
     try:
