@@ -16,3 +16,6 @@ __pycache__/
 
 # Build specific
 output/
+build/
+dist/
+*.spec

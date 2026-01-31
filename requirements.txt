@@ -1,4 +1,4 @@
-ttkbootstrap>=1.10.1
+customtkinter>=5.2.0
 keyboard>=0.13.5
 PyDirectInput>=1.0.4
 pyautogui>=0.9.54
