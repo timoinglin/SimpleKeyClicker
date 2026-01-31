@@ -1,5 +1,11 @@
 # SimpleKeyClicker
 
+[![GitHub Downloads](https://img.shields.io/github/downloads/timoinglin/SimpleKeyClicker/total?style=for-the-badge&logo=github&color=6c5ce7)](https://github.com/timoinglin/SimpleKeyClicker/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/timoinglin/SimpleKeyClicker?style=for-the-badge&logo=github&color=00d26a)](https://github.com/timoinglin/SimpleKeyClicker/releases/latest)
+[![License](https://img.shields.io/github/license/timoinglin/SimpleKeyClicker?style=for-the-badge&color=ffa502)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.8+-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Platform](https://img.shields.io/badge/Platform-Windows-0078d4?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/timoinglin/SimpleKeyClicker/releases)
+
 A powerful and user-friendly GUI automation tool for simulating keyboard and mouse inputs. Built with Python and **CustomTkinter** for a stunning modern dark UI. Perfect for gaming macros, testing, or automating repetitive input tasks.
 
 ![SimpleKeyClicker Screenshot](images/screenshot30042025.png)
