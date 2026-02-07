@@ -15,13 +15,23 @@ from tkinter import filedialog, PhotoImage
 import pyautogui
 from PIL import ImageGrab, Image
 from pynput import mouse
+import ctypes
 
 # Performance settings
 try:
     pydirectinput.PAUSE = 0
     pyautogui.PAUSE = 0
+    pydirectinput.FAILSAFE = False
+    pyautogui.FAILSAFE = False
 except Exception:
     pass
+
+# Set Windows timer resolution to 1ms for high-precision timing
+if os.name == 'nt':
+    try:
+        ctypes.windll.winmm.timeBeginPeriod(1)
+    except Exception:
+        pass
 
 def resource_path(relative_path):
     """Get absolute path to resource, works for dev and PyInstaller."""
@@ -503,9 +513,14 @@ class KeyClickerApp(ctk.CTk):
                         self.running = False
                         break
                     
-                    self.after(0, lambda r=row: r.set_completed())
-                    time.sleep(delay)
-                    self.after(0, lambda r=row: r.set_active(False))
+                    if delay > 0.05:
+                        self.after(0, lambda r=row: r.set_completed())
+                    
+                    if delay > 0:
+                        time.sleep(delay)
+                    
+                    if delay > 0.05:
+                        self.after(0, lambda r=row: r.set_active(False))
         finally:
             if mode == "limited" and loop > reps:
                 self.after(0, lambda: self.status_label.configure(text="✓ Completed", text_color=COLORS["success"]))
@@ -533,7 +548,6 @@ class KeyClickerApp(ctk.CTk):
                 if cmd in {'click', 'rclick', 'mclick'}:
                     x, y = map(int, args)
                     pydirectinput.moveTo(x, y)
-                    time.sleep(0.05)
                     button = {'click': 'left', 'rclick': 'right', 'mclick': 'middle'}[cmd]
                     if hold_time > 0:
                         pydirectinput.mouseDown(button=button)
@@ -545,7 +559,7 @@ class KeyClickerApp(ctk.CTk):
                 
                 elif cmd == 'moveto':
                     x, y = map(int, args)
-                    pyautogui.moveTo(x, y, duration=0.3)
+                    pyautogui.moveTo(x, y)
                     return True
                 
                 elif cmd == 'waitcolor':
@@ -582,7 +596,7 @@ class KeyClickerApp(ctk.CTk):
                 else:
                     pydirectinput.press(key)
             else:
-                pyautogui.write(key, interval=0.05)
+                pyautogui.write(key, interval=0.0)
             
             return True
         except Exception as e:
