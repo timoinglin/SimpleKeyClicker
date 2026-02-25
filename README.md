@@ -24,6 +24,7 @@ A powerful and user-friendly GUI automation tool for simulating keyboard and mou
 - 🛡️ **Safety Features**: Safe Mode blocks dangerous keys, ESC for emergency stop
 - 💡 **Visual Feedback**: Active row highlighting and status indicators during execution
 - ⌨️ **Global Hotkeys**: Ctrl+F2 (Start), Ctrl+F3 (Stop), ESC (Emergency Stop)
+- 🔧 **Custom Keybinds**: Reassign start, stop and emergency stop hotkeys via Settings
 
 ## 📥 Download
 
@@ -97,6 +98,7 @@ The EXE will be created in the `dist/` folder.
 | `up`, `down`, `left`, `right` | Arrow keys |
 | `f1` - `f12` | Function keys |
 | `shift`, `ctrl`, `alt`, `win` | Modifier keys (use Hold Time) |
+| `ctrl+c`, `alt+f4` | Key combos (modifiers held automatically) |
 | `Hello World!` | Type text string |
 
 ### Mouse
@@ -108,11 +110,18 @@ The EXE will be created in the `dist/` folder.
 | `click(x,y)` | Left click at coordinates |
 | `rclick(x,y)` | Right click at coordinates |
 | `moveto(x,y)` | Move cursor to coordinates |
+| `drag(x1,y1,x2,y2)` | Drag from point A to point B |
 
 ### Color Detection
 | Action | Description |
 |--------|-------------|
 | `waitcolor(r,g,b,x,y)` | Wait until color RGB appears at (x,y) |
+
+### Timing
+| Value | Description |
+|-------|-------------|
+| `0.5` | Fixed delay in seconds |
+| `0.3-0.8` | Random delay between min and max |
 
 ## 🛡️ Safety Features
 
@@ -126,9 +135,11 @@ The EXE will be created in the `dist/` folder.
 ### Global Hotkeys
 | Hotkey | Action |
 |--------|--------|
-| `Ctrl+F2` | Start automation |
-| `Ctrl+F3` | Stop automation |
-| `ESC` | Emergency stop |
+| `Ctrl+F2` | Start automation (default) |
+| `Ctrl+F3` | Stop automation (default) |
+| `ESC` | Emergency stop (default) |
+
+> All hotkeys are fully customizable. Click **⚙ Settings** in the header to open the keybind editor, then click **⏺ Record** next to any hotkey and press your preferred key combination. Changes take effect immediately and are saved/loaded with your configuration files.
 
 ## 📦 Requirements
 

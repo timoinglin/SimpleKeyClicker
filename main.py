@@ -8,6 +8,7 @@ import time
 import os
 import sys
 import json
+import random
 import pydirectinput
 import keyboard
 import customtkinter as ctk
@@ -43,10 +44,9 @@ def resource_path(relative_path):
 
 # App constants
 TOOL_NAME = "SimpleKeyClicker"
-VERSION = "2.0 Modern"
+VERSION = "2.0"
 ICON_PATH = resource_path("logo.ico")
 LOGO_PATH = resource_path("logo.png")
-EMERGENCY_STOP_KEY = 'esc'
 
 SINGLE_ACTION_KEYS = {
     'tab', 'space', 'enter', 'esc', 'backspace', 'delete', 'insert',
@@ -57,7 +57,7 @@ SINGLE_ACTION_KEYS = {
 }
 
 DANGEROUS_KEYS = {'alt', 'ctrl', 'shift', 'win', 'cmd', 'f4', 'delete', 'tab'}
-SYSTEM_COMMANDS = {'waitcolor', 'ifcolor'}
+SYSTEM_COMMANDS = {'waitcolor', 'ifcolor', 'drag'}
 COLOR_MATCH_TOLERANCE = 10
 WAITCOLOR_TIMEOUT = 30
 
@@ -211,7 +211,7 @@ class KeyClickerApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        self.title(f"{TOOL_NAME} {VERSION}")
+        self.title(TOOL_NAME)
         self.geometry("950x650")
         self.minsize(900, 550)
         self.configure(fg_color=COLORS["bg_dark"])
@@ -227,13 +227,20 @@ class KeyClickerApp(ctk.CTk):
         self.rows = []
         self.thread = None
         self.error_acknowledged = threading.Event()
+        self._unsaved_changes = False
         
         # Variables
         self.run_mode = ctk.StringVar(value="infinite")
         self.repetitions = ctk.IntVar(value=10)
         
+        # Custom keybinds
+        self.hotkey_start = ctk.StringVar(value="ctrl+f2")
+        self.hotkey_stop = ctk.StringVar(value="ctrl+f3")
+        self.hotkey_emergency = ctk.StringVar(value="esc")
+        
         self._create_ui()
         self._setup_hotkeys()
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
     
     def _create_ui(self):
         # Main container
@@ -281,6 +288,7 @@ class KeyClickerApp(ctk.CTk):
         
         ctk.CTkButton(menu_frame, text="📂 Load", fg_color=COLORS["bg_card"], hover_color=COLORS["bg_hover"], command=self.load_configuration, **btn_style).pack(side="left", padx=5)
         ctk.CTkButton(menu_frame, text="💾 Save", fg_color=COLORS["bg_card"], hover_color=COLORS["bg_hover"], command=self.save_configuration, **btn_style).pack(side="left", padx=5)
+        ctk.CTkButton(menu_frame, text="⚙ Settings", fg_color=COLORS["bg_card"], hover_color=COLORS["bg_hover"], command=self.show_settings, **btn_style).pack(side="left", padx=5)
         ctk.CTkButton(menu_frame, text="❓ Help", fg_color=COLORS["bg_card"], hover_color=COLORS["bg_hover"], command=self.show_help, **btn_style).pack(side="left", padx=5)
     
     def _create_controls(self, parent):
@@ -306,7 +314,8 @@ class KeyClickerApp(ctk.CTk):
             btn_frame, text="⏹  STOP", width=140, height=50,
             font=("Segoe UI", 15, "bold"), corner_radius=12,
             fg_color=COLORS["danger"], hover_color="#ff6b7a",
-            command=self.stop_action
+            command=self.stop_action,
+            state="disabled"
         )
         self.stop_btn.pack(side="left")
         
@@ -376,7 +385,9 @@ class KeyClickerApp(ctk.CTk):
         self.status_label = ctk.CTkLabel(inner, text="⏸ Ready", font=("Segoe UI", 13), text_color=COLORS["text_dim"])
         self.status_label.pack(side="left")
         
-        ctk.CTkLabel(inner, text="Ctrl+F2: Start  •  Ctrl+F3: Stop  •  ESC: Emergency Stop", font=("Segoe UI", 11), text_color=COLORS["text_dim"]).pack(side="right")
+        self.hotkey_hint_label = ctk.CTkLabel(inner, text="", font=("Segoe UI", 11), text_color=COLORS["text_dim"])
+        self.hotkey_hint_label.pack(side="right")
+        self._update_hotkey_hints()
     
     def _update_rep_state(self):
         if self.run_mode.get() == "limited":
@@ -392,12 +403,14 @@ class KeyClickerApp(ctk.CTk):
         row.pack(fill="x", pady=5)
         self.rows.append(row)
         self._update_row_buttons()
+        self._unsaved_changes = True
     
     def _delete_row(self, row):
         if row in self.rows and not row.is_first:
             self.rows.remove(row)
             row.destroy()
             self._update_row_buttons()
+            self._unsaved_changes = True
     
     def _duplicate_row(self, row):
         if row in self.rows:
@@ -430,11 +443,119 @@ class KeyClickerApp(ctk.CTk):
     
     def _setup_hotkeys(self):
         try:
-            keyboard.add_hotkey('ctrl+f2', self.start_action)
-            keyboard.add_hotkey('ctrl+f3', self.stop_action)
-            keyboard.add_hotkey(EMERGENCY_STOP_KEY, self.emergency_stop)
+            keyboard.add_hotkey(self.hotkey_start.get(), self.start_action)
+            keyboard.add_hotkey(self.hotkey_stop.get(), self.stop_action)
+            keyboard.add_hotkey(self.hotkey_emergency.get(), self.emergency_stop)
         except Exception as e:
             print(f"Hotkey warning: {e}")
+    
+    def _rebind_hotkeys(self):
+        """Remove all hotkeys and re-register with current keybind values."""
+        try:
+            keyboard.unhook_all_hotkeys()
+        except Exception:
+            pass
+        self._setup_hotkeys()
+        self._update_hotkey_hints()
+    
+    def _update_hotkey_hints(self):
+        """Update the status bar hotkey hint text."""
+        start = self.hotkey_start.get().upper()
+        stop = self.hotkey_stop.get().upper()
+        emergency = self.hotkey_emergency.get().upper()
+        try:
+            self.hotkey_hint_label.configure(
+                text=f"{start}: Start  •  {stop}: Stop  •  {emergency}: Emergency Stop"
+            )
+        except Exception:
+            pass
+    
+    def show_settings(self):
+        """Open the keybind settings dialog."""
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Settings - Keybinds")
+        dialog.geometry("480x380")
+        dialog.transient(self)
+        dialog.grab_set()
+        dialog.configure(fg_color=COLORS["bg_dark"])
+        dialog.after(200, lambda: dialog.iconbitmap(ICON_PATH))
+        
+        # Title
+        ctk.CTkLabel(dialog, text="⚙  Keybind Settings", font=("Segoe UI", 20, "bold")).pack(pady=(20, 5))
+        ctk.CTkLabel(dialog, text="Click Record, then press your desired key combination", font=("Segoe UI", 12), text_color=COLORS["text_dim"]).pack(pady=(0, 15))
+        
+        # Keybind entries
+        entries_frame = ctk.CTkFrame(dialog, fg_color=COLORS["bg_card"], corner_radius=12)
+        entries_frame.pack(fill="x", padx=25, pady=5)
+        
+        temp_vars = {
+            "start": ctk.StringVar(value=self.hotkey_start.get()),
+            "stop": ctk.StringVar(value=self.hotkey_stop.get()),
+            "emergency": ctk.StringVar(value=self.hotkey_emergency.get()),
+        }
+        
+        labels = {
+            "start": "Start Automation",
+            "stop": "Stop Automation",
+            "emergency": "Emergency Stop",
+        }
+        
+        def _record_hotkey(var, btn):
+            btn.configure(text="Press keys...", fg_color=COLORS["danger"])
+            dialog.update()
+            
+            def _capture():
+                try:
+                    combo = keyboard.read_hotkey(suppress=False)
+                    var.set(combo)
+                except Exception:
+                    pass
+                finally:
+                    dialog.after(0, lambda: btn.configure(text="⏺ Record", fg_color=COLORS["accent"]))
+            
+            threading.Thread(target=_capture, daemon=True).start()
+        
+        for key_name in ["start", "stop", "emergency"]:
+            row = ctk.CTkFrame(entries_frame, fg_color="transparent")
+            row.pack(fill="x", padx=15, pady=10)
+            
+            ctk.CTkLabel(row, text=labels[key_name], font=("Segoe UI", 13, "bold"), width=160, anchor="w").pack(side="left")
+            
+            entry = ctk.CTkEntry(row, textvariable=temp_vars[key_name], width=160, height=36, corner_radius=8, font=("Segoe UI", 13))
+            entry.pack(side="left", padx=(0, 10))
+            
+            rec_btn = ctk.CTkButton(
+                row, text="⏺ Record", width=90, height=36,
+                corner_radius=8, font=("Segoe UI", 12),
+                fg_color=COLORS["accent"], hover_color=COLORS["accent_hover"]
+            )
+            rec_btn.configure(command=lambda v=temp_vars[key_name], b=rec_btn: _record_hotkey(v, b))
+            rec_btn.pack(side="left")
+        
+        # Bottom buttons
+        btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        btn_frame.pack(fill="x", padx=25, pady=20)
+        
+        def _save():
+            self.hotkey_start.set(temp_vars["start"].get())
+            self.hotkey_stop.set(temp_vars["stop"].get())
+            self.hotkey_emergency.set(temp_vars["emergency"].get())
+            self._rebind_hotkeys()
+            dialog.destroy()
+            self._show_success("Keybinds updated!")
+        
+        def _reset_defaults():
+            temp_vars["start"].set("ctrl+f2")
+            temp_vars["stop"].set("ctrl+f3")
+            temp_vars["emergency"].set("esc")
+        
+        btn_style = {"height": 40, "corner_radius": 10, "font": ("Segoe UI", 13)}
+        
+        ctk.CTkButton(btn_frame, text="Reset Defaults", width=130, fg_color=COLORS["bg_card"], hover_color=COLORS["bg_hover"], command=_reset_defaults, **btn_style).pack(side="left")
+        ctk.CTkButton(btn_frame, text="Cancel", width=100, fg_color=COLORS["bg_card"], hover_color=COLORS["bg_hover"], command=dialog.destroy, **btn_style).pack(side="right", padx=(10, 0))
+        ctk.CTkButton(btn_frame, text="Save", width=100, fg_color=COLORS["success"], hover_color="#00b85c", command=_save, **btn_style).pack(side="right")
+        
+        self._center_window(dialog)
     
     def start_action(self):
         if self.running:
@@ -447,7 +568,7 @@ class KeyClickerApp(ctk.CTk):
                 return
             try:
                 float(row.hold_var.get())
-                float(row.delay_var.get())
+                self._parse_delay(row.delay_var.get())  # validates delay / range
             except ValueError:
                 self._show_error(f"Row {i+1}: Invalid timing values.")
                 return
@@ -461,6 +582,8 @@ class KeyClickerApp(ctk.CTk):
                 return
         
         self.running = True
+        self.start_btn.configure(state="disabled")
+        self.stop_btn.configure(state="normal")
         self.status_label.configure(text="▶ Running...", text_color=COLORS["success"])
         self.thread = threading.Thread(target=self._run_loop, daemon=True)
         self.thread.start()
@@ -472,6 +595,8 @@ class KeyClickerApp(ctk.CTk):
     
     def _update_stopped(self):
         self.status_label.configure(text="⏸ Stopped", text_color=COLORS["text_dim"])
+        self.start_btn.configure(state="normal")
+        self.stop_btn.configure(state="disabled")
         for row in self.rows:
             row.set_active(False)
     
@@ -504,7 +629,7 @@ class KeyClickerApp(ctk.CTk):
                     key = row.key_var.get().strip()
                     try:
                         hold = float(row.hold_var.get())
-                        delay = float(row.delay_var.get())
+                        delay = self._parse_delay(row.delay_var.get())
                     except:
                         self.running = False
                         break
@@ -565,6 +690,26 @@ class KeyClickerApp(ctk.CTk):
                 elif cmd == 'waitcolor':
                     r, g, b, x, y = map(int, args)
                     return self._wait_for_color(r, g, b, x, y)
+                
+                elif cmd == 'drag':
+                    x1, y1, x2, y2 = map(int, args)
+                    pyautogui.moveTo(x1, y1)
+                    time.sleep(0.05)
+                    pydirectinput.mouseDown()
+                    time.sleep(0.05)
+                    pyautogui.moveTo(x2, y2, duration=max(hold_time, 0.1))
+                    pydirectinput.mouseUp()
+                    return True
+            
+            # Keyboard combos (e.g. ctrl+c, alt+f4)
+            if '+' in key and all(part.strip().lower() in SINGLE_ACTION_KEYS or len(part.strip()) == 1 for part in key.split('+')):
+                parts = [p.strip() for p in key.split('+')]
+                for p in parts:
+                    pydirectinput.keyDown(p)
+                time.sleep(max(hold_time, 0.05))
+                for p in reversed(parts):
+                    pydirectinput.keyUp(p)
+                return True
             
             # Simple actions
             if k_lower == "click":
@@ -618,6 +763,43 @@ class KeyClickerApp(ctk.CTk):
         self.after(0, lambda: self._show_error(f"Color not found at ({x},{y})"))
         return False
     
+    @staticmethod
+    def _parse_delay(value):
+        """Parse a delay value. Supports fixed ('0.5') or random range ('0.3-0.8')."""
+        value = value.strip()
+        if '-' in value and not value.startswith('-'):
+            parts = value.split('-', 1)
+            lo, hi = float(parts[0]), float(parts[1])
+            if lo > hi:
+                lo, hi = hi, lo
+            return random.uniform(lo, hi)
+        return float(value)
+    
+    def _on_close(self):
+        """Prompt before closing if there are unsaved changes."""
+        if self.running:
+            self.emergency_stop()
+        if self._unsaved_changes:
+            dialog = ctk.CTkToplevel(self)
+            dialog.title("Unsaved Changes")
+            dialog.geometry("380x160")
+            dialog.transient(self)
+            dialog.grab_set()
+            dialog.configure(fg_color=COLORS["bg_dark"])
+            dialog.after(200, lambda: dialog.iconbitmap(ICON_PATH))
+            
+            ctk.CTkLabel(dialog, text="You have unsaved changes.", font=("Segoe UI", 14, "bold")).pack(pady=(22, 5))
+            ctk.CTkLabel(dialog, text="Are you sure you want to quit?", font=("Segoe UI", 12), text_color=COLORS["text_dim"]).pack()
+            
+            bf = ctk.CTkFrame(dialog, fg_color="transparent")
+            bf.pack(pady=18)
+            ctk.CTkButton(bf, text="Quit", width=100, fg_color=COLORS["danger"], hover_color="#ff6b7a", command=self.destroy).pack(side="left", padx=8)
+            ctk.CTkButton(bf, text="Cancel", width=100, fg_color=COLORS["bg_card"], hover_color=COLORS["bg_hover"], command=dialog.destroy).pack(side="left", padx=8)
+            
+            self._center_window(dialog)
+        else:
+            self.destroy()
+    
     def _start_capture(self, key_var):
         if self.running:
             return
@@ -654,6 +836,7 @@ class KeyClickerApp(ctk.CTk):
         dialog.transient(self)
         dialog.grab_set()
         dialog.configure(fg_color=COLORS["bg_dark"])
+        dialog.after(200, lambda: dialog.iconbitmap(ICON_PATH))
         
         x, y = data['x'], data['y']
         r, g, b = data['color']
@@ -697,10 +880,14 @@ class KeyClickerApp(ctk.CTk):
             config = {
                 'run_mode': self.run_mode.get(),
                 'repetitions': self.repetitions.get(),
-                'rows': [r.get_data() for r in self.rows]
+                'rows': [r.get_data() for r in self.rows],
+                'hotkey_start': self.hotkey_start.get(),
+                'hotkey_stop': self.hotkey_stop.get(),
+                'hotkey_emergency': self.hotkey_emergency.get(),
             }
             with open(path, 'w') as f:
                 json.dump(config, f, indent=2)
+            self._unsaved_changes = False
             self._show_success("Configuration saved!")
     
     def load_configuration(self):
@@ -718,6 +905,15 @@ class KeyClickerApp(ctk.CTk):
                 self.repetitions.set(config.get('repetitions', 10))
                 self._update_rep_state()
                 
+                # Load keybinds if present
+                if 'hotkey_start' in config:
+                    self.hotkey_start.set(config['hotkey_start'])
+                if 'hotkey_stop' in config:
+                    self.hotkey_stop.set(config['hotkey_stop'])
+                if 'hotkey_emergency' in config:
+                    self.hotkey_emergency.set(config['hotkey_emergency'])
+                self._rebind_hotkeys()
+                
                 # Clear existing rows
                 for r in self.rows:
                     r.destroy()
@@ -729,67 +925,119 @@ class KeyClickerApp(ctk.CTk):
                     self._add_row(is_first=True)
                 else:
                     for i, data in enumerate(rows_data):
-                        self._add_row(is_first=(i == 0), key=data.get('key', ''), hold=data.get('hold', '0.0'), delay=data.get('delay', '0.5'))
+                        self._add_row(is_first=(i == 0), key=data.get('key', ''), hold=data.get('hold', '0.0'), delay=data.get('delay', data.get('sleep', '0.5')))
                 
+                self._unsaved_changes = False
                 self._show_success("Configuration loaded!")
             except Exception as e:
                 self._show_error(f"Load failed: {e}")
     
     def show_help(self):
         dialog = ctk.CTkToplevel(self)
-        dialog.title("Help - Actions Reference")
-        dialog.geometry("600x500")
+        dialog.title("Help — Actions Reference")
+        dialog.geometry("620x620")
         dialog.transient(self)
         dialog.configure(fg_color=COLORS["bg_dark"])
+        dialog.after(200, lambda: dialog.iconbitmap(ICON_PATH))
         
-        text = ctk.CTkTextbox(dialog, font=("Consolas", 12), fg_color=COLORS["bg_card"], corner_radius=12)
-        text.pack(fill="both", expand=True, padx=20, pady=20)
+        # Header with logo and version
+        hdr = ctk.CTkFrame(dialog, fg_color="transparent")
+        hdr.pack(fill="x", padx=25, pady=(20, 10))
         
-        help_text = """
-═══════════════════════════════════════════════════
-                 KEYBOARD ACTIONS
-═══════════════════════════════════════════════════
-
-Letters & Numbers:  a, b, c, 1, 2, 3, etc.
-Special Keys:       space, enter, tab, esc, backspace
-Arrow Keys:         up, down, left, right
-Function Keys:      f1, f2, ... f12
-Modifiers:          shift, ctrl, alt, win
-
-
-═══════════════════════════════════════════════════
-                  MOUSE ACTIONS
-═══════════════════════════════════════════════════
-
-click           Left click at current position
-rclick          Right click at current position
-mclick          Middle click at current position
-
-click(x,y)      Click at coordinates (x, y)
-rclick(x,y)     Right click at (x, y)
-mclick(x,y)     Middle click at (x, y)
-moveto(x,y)     Move cursor to (x, y)
-
-
-═══════════════════════════════════════════════════
-               COLOR DETECTION
-═══════════════════════════════════════════════════
-
-waitcolor(r,g,b,x,y)   Wait until color RGB appears at (x,y)
-
-
-═══════════════════════════════════════════════════
-                    TIPS
-═══════════════════════════════════════════════════
-
-• Use the 🎯 Capture button to get coordinates/colors
-• Hold Time > 0 holds the key/button down
-• Delay is the pause AFTER the action
-• Safe Mode blocks dangerous keys (ctrl, alt, etc.)
-• ESC = Emergency Stop (always works)
-"""
-        text.insert("1.0", help_text)
-        text.configure(state="disabled")
+        try:
+            ctk.CTkLabel(hdr, image=self.logo, text="").pack(side="left", padx=(0, 12))
+        except Exception:
+            pass
+        
+        hdr_text = ctk.CTkFrame(hdr, fg_color="transparent")
+        hdr_text.pack(side="left")
+        ctk.CTkLabel(hdr_text, text=TOOL_NAME, font=("Segoe UI", 22, "bold")).pack(anchor="w")
+        ctk.CTkLabel(hdr_text, text=f"Version {VERSION}", font=("Segoe UI", 12), text_color=COLORS["text_dim"]).pack(anchor="w")
+        
+        # Scrollable content
+        scroll = ctk.CTkScrollableFrame(dialog, fg_color="transparent", scrollbar_button_color=COLORS["border"], scrollbar_button_hover_color=COLORS["accent"])
+        scroll.pack(fill="both", expand=True, padx=15, pady=(5, 15))
+        
+        def _section(parent, title):
+            ctk.CTkLabel(parent, text=title, font=("Segoe UI", 15, "bold"), text_color=COLORS["accent"]).pack(anchor="w", padx=10, pady=(14, 6))
+        
+        def _card(parent):
+            card = ctk.CTkFrame(parent, fg_color=COLORS["bg_card"], corner_radius=10)
+            card.pack(fill="x", padx=8, pady=2)
+            return card
+        
+        def _row(card, action, desc):
+            r = ctk.CTkFrame(card, fg_color="transparent")
+            r.pack(fill="x", padx=14, pady=5)
+            ctk.CTkLabel(r, text=action, font=("Consolas", 13, "bold"), text_color=COLORS["text"], width=200, anchor="w").pack(side="left")
+            ctk.CTkLabel(r, text=desc, font=("Segoe UI", 12), text_color=COLORS["text_dim"]).pack(side="left")
+        
+        # --- Keyboard ---
+        _section(scroll, "⌨  Keyboard Actions")
+        c = _card(scroll)
+        _row(c, "a, b, 1, 2 …", "Single key press")
+        _row(c, "space  enter  tab  esc", "Special keys")
+        _row(c, "up  down  left  right", "Arrow keys")
+        _row(c, "f1 – f12", "Function keys")
+        _row(c, "shift  ctrl  alt  win", "Modifier keys (use Hold Time)")
+        _row(c, "ctrl+c, alt+f4", "Key combos (hold modifiers)")
+        _row(c, "Hello World!", "Type a text string")
+        
+        # --- Mouse ---
+        _section(scroll, "🖱  Mouse Actions")
+        c = _card(scroll)
+        _row(c, "click", "Left click at current position")
+        _row(c, "rclick", "Right click at current position")
+        _row(c, "mclick", "Middle click at current position")
+        _row(c, "click(x,y)", "Left click at coordinates")
+        _row(c, "rclick(x,y)", "Right click at coordinates")
+        _row(c, "mclick(x,y)", "Middle click at coordinates")
+        _row(c, "moveto(x,y)", "Move cursor to coordinates")
+        _row(c, "drag(x1,y1,x2,y2)", "Drag from (x1,y1) to (x2,y2)")
+        
+        # --- Color ---
+        _section(scroll, "🎨  Color Detection")
+        c = _card(scroll)
+        _row(c, "waitcolor(r,g,b,x,y)", "Wait until color appears at position")
+        
+        # --- Timing ---
+        _section(scroll, "⏱  Timing")
+        c = _card(scroll)
+        _row(c, "0.5", "Fixed delay (seconds)")
+        _row(c, "0.3-0.8", "Random delay between min and max")
+        
+        # --- Tips ---
+        _section(scroll, "💡  Tips")
+        tips_card = ctk.CTkFrame(scroll, fg_color=COLORS["bg_card"], corner_radius=10)
+        tips_card.pack(fill="x", padx=8, pady=2)
+        tips = [
+            ("🎯", "Use the Capture button to grab coordinates & colors"),
+            ("⏱", "Hold Time > 0 holds the key / button down"),
+            ("⏸", "Delay is the pause AFTER each action"),
+            ("🛡", "Safe Mode blocks dangerous keys (ctrl, alt …)"),
+            ("⚙", "Customise hotkeys in Settings"),
+        ]
+        for icon, tip in tips:
+            tr = ctk.CTkFrame(tips_card, fg_color="transparent")
+            tr.pack(fill="x", padx=14, pady=5)
+            ctk.CTkLabel(tr, text=icon, font=("Segoe UI", 15), width=28).pack(side="left", padx=(0, 8))
+            ctk.CTkLabel(tr, text=tip, font=("Segoe UI", 12), text_color=COLORS["text_dim"]).pack(side="left")
+        
+        # --- Hotkeys ---
+        _section(scroll, "⌨  Current Hotkeys")
+        hk_card = ctk.CTkFrame(scroll, fg_color=COLORS["bg_card"], corner_radius=10)
+        hk_card.pack(fill="x", padx=8, pady=(2, 10))
+        hotkeys = [
+            (self.hotkey_start.get(), "Start automation"),
+            (self.hotkey_stop.get(), "Stop automation"),
+            (self.hotkey_emergency.get(), "Emergency stop"),
+        ]
+        for combo, desc in hotkeys:
+            hr = ctk.CTkFrame(hk_card, fg_color="transparent")
+            hr.pack(fill="x", padx=14, pady=5)
+            badge = ctk.CTkLabel(hr, text=f" {combo.upper()} ", font=("Consolas", 12, "bold"), fg_color=COLORS["accent"], corner_radius=6, text_color="#ffffff")
+            badge.pack(side="left", padx=(0, 12))
+            ctk.CTkLabel(hr, text=desc, font=("Segoe UI", 12), text_color=COLORS["text_dim"]).pack(side="left")
         
         self._center_window(dialog)
     
@@ -800,6 +1048,7 @@ waitcolor(r,g,b,x,y)   Wait until color RGB appears at (x,y)
         dialog.transient(self)
         dialog.grab_set()
         dialog.configure(fg_color=COLORS["bg_dark"])
+        dialog.after(200, lambda: dialog.iconbitmap(ICON_PATH))
         
         ctk.CTkLabel(dialog, text="⚠", font=("Segoe UI", 48), text_color=COLORS["danger"]).pack(pady=(20, 10))
         ctk.CTkLabel(dialog, text=message, font=("Segoe UI", 13), wraplength=350).pack(pady=5)
@@ -814,6 +1063,7 @@ waitcolor(r,g,b,x,y)   Wait until color RGB appears at (x,y)
         dialog.geometry("350x150")
         dialog.transient(self)
         dialog.configure(fg_color=COLORS["bg_dark"])
+        dialog.after(200, lambda: dialog.iconbitmap(ICON_PATH))
         
         ctk.CTkLabel(dialog, text="✓", font=("Segoe UI", 48), text_color=COLORS["success"]).pack(pady=(20, 10))
         ctk.CTkLabel(dialog, text=message, font=("Segoe UI", 13)).pack()

@@ -2,7 +2,7 @@
 
 ![SimpleKeyClicker Logo](logo.png)
 
-A powerful and user-friendly GUI automation tool for simulating keyboard and mouse inputs. Built with Python and ttkbootstrap. Perfect for gaming macros, testing, or automating repetitive input tasks.
+A powerful and user-friendly GUI automation tool for simulating keyboard and mouse inputs. Built with Python and **CustomTkinter** for a stunning modern dark UI. Perfect for gaming macros, testing, or automating repetitive input tasks.
 
 ![SimpleKeyClicker Screenshot](images/screenshot.png)
 
@@ -13,7 +13,7 @@ A powerful and user-friendly GUI automation tool for simulating keyboard and mou
 *   **Action Sequencing**: Create and run sequences of keyboard presses and mouse actions.
 *   **Repetition Control**: Run sequences indefinitely or for a specific number of times.
 *   **Customizable Timing**: Set delays *after* each action and specify hold durations.
-*   **Theme Support**: Toggle between Light (Flatly) and Dark (Darkly) themes.
+*   **Theme Support**: Beautiful glassmorphism dark theme with purple accents.
 *   **Advanced Mouse Control**: Perform clicks and movements at specific screen coordinates (`moveto(x,y)`, `click(x,y)`).
 *   **Coordinate/Color Capture**: Easily capture mouse coordinates (X,Y) and screen pixel color (R,G,B) with a single click.
 *   **Color Detection**: Pause execution until a specific color appears at designated coordinates (`waitcolor`) with timeout error handling.
