@@ -32,6 +32,10 @@ A powerful and user-friendly GUI automation tool for simulating keyboard and mou
 
 Or build from source (see below).
 
+> 💛 **Using SimpleKeyClicker?** It's free and open-source, built and maintained in spare time. If it's saved you time on repetitive input tasks — or you'd like to see it keep growing — a coffee genuinely helps. See [Support the Project](#-support-the-project).
+>
+> [![Support the project on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/kneuma)
+
 ## 🚀 Installation
 
 ### Prerequisites
@@ -154,6 +158,14 @@ The EXE will be created in the `dist/` folder.
 ## 🤝 Contributing
 
 Contributions are welcome! Feel free to submit issues and pull requests.
+
+## 💛 Support the Project
+
+This project is free and open-source, built and maintained in spare time. If SimpleKeyClicker has saved you time — or you'd just like to see it keep growing — a coffee is hugely appreciated and helps keep this and other free tools maintained and improving.
+
+[![Support the project on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/kneuma)
+
+Every contribution also funds more free open-source tools — thank you! 💛
 
 ## 📄 License
 
