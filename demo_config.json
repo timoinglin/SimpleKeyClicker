@@ -1,39 +1,19 @@
 {
-    "rows": [
-      {
-        "key": "moveto(150,300)",
-        "sleep": "0.5",
-        "hold": "0.0"
-      },
-      {
-        "key": "click(150,300)",
-        "sleep": "0.7",
-        "hold": "0.0"
-      },
-      {
-        "key": "waitcolor(255,0,0,50,50)",
-        "sleep": "0.3",
-        "hold": "0.0"
-      },
-      {
-        "key": "space",
-        "sleep": "1.0",
-        "hold": "0.0"
-      },
-      {
-        "key": "w",
-        "sleep": "0.5",
-        "hold": "1.2"
-      },
-      {
-        "key": "Hello!",
-        "sleep": "0.8",
-        "hold": "0.0"
-      },
-      {
-        "key": "enter",
-        "sleep": "0.5",
-        "hold": "0.0"
-      }
-    ]
-  }
+  "version": "2.2.0",
+  "run_mode": "limited",
+  "repetitions": 5,
+  "safe_mode": true,
+  "humanize": false,
+  "accent": "Purple",
+  "rows": [
+    { "key": "moveto(150,300)", "hold": "0.0", "delay": "0.5", "enabled": true },
+    { "key": "click(150,300)", "hold": "0.0", "delay": "0.7", "enabled": true },
+    { "key": "ifcolor(255,0,0,50,50)", "hold": "0.0", "delay": "0.1", "enabled": true },
+    { "key": "space", "hold": "0.0", "delay": "0.5", "enabled": true },
+    { "key": "repeat(3)", "hold": "0.0", "delay": "0.0", "enabled": true },
+    { "key": "w", "hold": "1.2", "delay": "0.3-0.8", "enabled": true },
+    { "key": "endrepeat", "hold": "0.0", "delay": "0.0", "enabled": true },
+    { "key": "Hello!", "hold": "0.0", "delay": "0.8", "enabled": true },
+    { "key": "enter", "hold": "0.0", "delay": "0.5", "enabled": true }
+  ]
+}

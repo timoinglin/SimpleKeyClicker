@@ -8,23 +8,27 @@
 
 A powerful and user-friendly GUI automation tool for simulating keyboard and mouse inputs. Built with Python and **CustomTkinter** for a stunning modern dark UI. Perfect for gaming macros, testing, or automating repetitive input tasks.
 
-![SimpleKeyClicker Screenshot](images/screenshot30042025.png)
+![SimpleKeyClicker Screenshot](images/screenshot.jpg)
 
 ## ✨ Features
 
+- 🎮 **Game-Reliable Input**: Mouse and keyboard actions are sent via **PyDirectInput** (SendInput / scancodes) so clicks, moves and drags register inside games
 - 🎮 **Action Sequencing**: Create and run sequences of keyboard presses and mouse actions
-- ⏱️ **Customizable Timing**: Set delays after each action and hold durations for keys/buttons
+- 🔁 **Control Flow**: `repeat(N)` … `endrepeat` blocks and `ifcolor` / `ifnotcolor` conditionals
+- ☑️ **Per-Action Enable/Disable**: Mute any row without deleting it — great for tuning macros
+- ⏱️ **Customizable Timing**: Set delays after each action and hold durations, plus random delay ranges (`0.3-0.8`)
+- 🧍 **Humanize Movement**: Optional curved, eased, jittered mouse paths instead of instant teleports
 - 🔄 **Repetition Control**: Run sequences indefinitely or for a specific number of times
-- 🌙 **Modern Dark UI**: Beautiful glassmorphism dark theme with purple accents
-- 🖱️ **Advanced Mouse Control**: Click and move at specific coordinates (`moveto(x,y)`, `click(x,y)`)
+- 📊 **Live Stats**: Loop/action counters, elapsed time, CPS, and an ETA + progress bar for limited runs
+- ⏯️ **Pause / Resume**: Pause mid-sequence and resume from the same step (keeps your place)
+- 🌙 **Modern Dark UI**: Sleek dark theme with **7 selectable accent colors** and an always-on-top pin
+- 🖱️ **Advanced Mouse Control**: Click, move and drag at specific coordinates
 - 🎯 **Coordinate/Color Capture**: Built-in tool to capture mouse position and pixel color
-- 🎨 **Color Detection**: Wait for specific colors at designated coordinates (`waitcolor`)
-- ⌨️ **Reliable Typing**: Type strings accurately with proper case handling
-- 💾 **Save/Load Configurations**: Export and import your automation sequences as JSON
-- 🛡️ **Safety Features**: Safe Mode blocks dangerous keys, ESC for emergency stop
-- 💡 **Visual Feedback**: Active row highlighting and status indicators during execution
-- ⌨️ **Global Hotkeys**: Ctrl+F2 (Start), Ctrl+F3 (Stop), ESC (Emergency Stop)
-- 🔧 **Custom Keybinds**: Reassign start, stop and emergency stop hotkeys via Settings
+- 🎨 **Color Detection**: Wait for / branch on specific colors at designated coordinates
+- 💾 **Save/Load + Auto-Restore**: Export sequences as JSON, and your last session auto-restores on launch
+- 🛡️ **Safety Features**: Safe Mode blocks dangerous keys; customizable emergency stop
+- ✅ **Inline Validation**: Invalid timing/action fields are flagged with a red border before you run
+- ⌨️ **Global Hotkeys**: Start, Pause, Stop and Emergency Stop — all fully customizable
 
 ## 📥 Download
 
@@ -86,11 +90,12 @@ The EXE will be created in the `dist/` folder.
    - Enter a **Key/Button** or command (see Available Actions below)
    - Use the **🎯** button to capture coordinates/colors
    - Set **Hold Time** (how long to hold the key/button)
-   - Set **Delay** (pause after the action)
+   - Set **Delay** (pause after the action; supports ranges like `0.3-0.8`)
+   - Untick the **checkbox** to temporarily skip a row
 3. Use **▲ ▼ ❏ ✕** buttons to organize rows
 4. Select run mode: **Indefinitely** or **X Times**
 5. Click **▶ START** or press `Ctrl+F2`
-6. Click **⏹ STOP** or press `Ctrl+F3` / `ESC` to halt
+6. **⏸ PAUSE** (`Ctrl+F4`) to pause/resume, **⏹ STOP** (`Ctrl+F3`) or `ESC` to halt
 
 ## ⌨️ Available Actions
 
@@ -116,10 +121,18 @@ The EXE will be created in the `dist/` folder.
 | `moveto(x,y)` | Move cursor to coordinates |
 | `drag(x1,y1,x2,y2)` | Drag from point A to point B |
 
-### Color Detection
+### Color Detection & Conditions
 | Action | Description |
 |--------|-------------|
 | `waitcolor(r,g,b,x,y)` | Wait until color RGB appears at (x,y) |
+| `ifcolor(r,g,b,x,y)` | Run the **next** row only if the color matches |
+| `ifnotcolor(r,g,b,x,y)` | Run the **next** row only if the color is absent |
+
+### Control Flow
+| Action | Description |
+|--------|-------------|
+| `repeat(N)` | Repeat the rows below this marker N times… |
+| `endrepeat` | …up to this marker (blocks may be nested) |
 
 ### Timing
 | Value | Description |
@@ -140,6 +153,7 @@ The EXE will be created in the `dist/` folder.
 | Hotkey | Action |
 |--------|--------|
 | `Ctrl+F2` | Start automation (default) |
+| `Ctrl+F4` | Pause / resume (default) |
 | `Ctrl+F3` | Stop automation (default) |
 | `ESC` | Emergency stop (default) |
 

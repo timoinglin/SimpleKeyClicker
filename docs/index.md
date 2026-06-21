@@ -4,25 +4,28 @@
 
 A powerful and user-friendly GUI automation tool for simulating keyboard and mouse inputs. Built with Python and **CustomTkinter** for a stunning modern dark UI. Perfect for gaming macros, testing, or automating repetitive input tasks.
 
-![SimpleKeyClicker Screenshot](images/screenshot.png)
+![SimpleKeyClicker Screenshot](images/screenshot.jpg)
 
 ---
 
 ## Key Features
 
+*   **Game-Reliable Input**: Mouse/keyboard actions are sent via **PyDirectInput** (SendInput) so they register inside games.
 *   **Action Sequencing**: Create and run sequences of keyboard presses and mouse actions.
-*   **Repetition Control**: Run sequences indefinitely or for a specific number of times.
-*   **Customizable Timing**: Set delays *after* each action and specify hold durations.
-*   **Theme Support**: Beautiful glassmorphism dark theme with purple accents.
-*   **Advanced Mouse Control**: Perform clicks and movements at specific screen coordinates (`moveto(x,y)`, `click(x,y)`).
-*   **Coordinate/Color Capture**: Easily capture mouse coordinates (X,Y) and screen pixel color (R,G,B) with a single click.
-*   **Color Detection**: Pause execution until a specific color appears at designated coordinates (`waitcolor`) with timeout error handling.
-*   **Reliable Typing**: Type strings accurately, preserving case and handling symbols.
-*   **Save/Load Configurations**: Save/Load sequences and run settings (repetition mode/count) to JSON files.
-*   **Safety Features**: Toggleable Safe Mode and Emergency Stop (ESC key).
-*   **Visual Feedback**: Highlights the current row, shows loop counts, and overall status.
-*   **Organized UI**: Clean layout with a menu bar for less frequently used actions.
-*   **Global Hotkeys**: Start (`Ctrl+F2`), Stop (`Ctrl+F3`), and Emergency Stop (`ESC`).
+*   **Control Flow**: `repeat(N)` … `endrepeat` loops and `ifcolor` / `ifnotcolor` conditionals.
+*   **Per-Action Enable/Disable**: Mute any row without deleting it.
+*   **Customizable Timing**: Delays *after* each action, hold durations, and random delay ranges (`0.3-0.8`).
+*   **Humanize Movement**: Optional curved, eased, jittered mouse paths.
+*   **Pause / Resume**: Pause mid-sequence and resume from the same step.
+*   **Live Stats**: Loop/action counters, elapsed time, CPS, and an ETA + progress bar for limited runs.
+*   **Theme Support**: Sleek dark UI with 7 selectable accent colors and an always-on-top pin.
+*   **Advanced Mouse Control**: Clicks, moves and drags at specific screen coordinates.
+*   **Coordinate/Color Capture**: Capture mouse coordinates (X,Y) and pixel color (R,G,B) with a single click.
+*   **Color Detection**: Wait for or branch on a specific color at designated coordinates.
+*   **Save/Load + Auto-Restore**: Save/Load sequences to JSON; your last session auto-restores on launch.
+*   **Safety Features**: Toggleable Safe Mode and customizable Emergency Stop.
+*   **Inline Validation**: Invalid timing/action fields are flagged before you run.
+*   **Global Hotkeys**: Start (`Ctrl+F2`), Pause (`Ctrl+F4`), Stop (`Ctrl+F3`), Emergency Stop (`ESC`) — all customizable.
 
 ---
 
@@ -44,9 +47,9 @@ Get the latest release directly from the **[GitHub Releases Page](https://github
     *   Set the **Hold Time** and **Delay**.
 4.  Use the **▲**, **▼**, **❏**, **X** buttons on each row to organize your sequence.
 5.  Select the desired **Run Mode**: "Run Indefinitely" or "Run X Times".
-6.  **(Optional)** Go to **File > Save Configuration**.
+6.  **(Optional)** Click **💾 Save** to export your sequence (your session also auto-restores on next launch).
 7.  Click "**Start**" or press `Ctrl+F2`.
-8.  Click "**Stop**" or press `Ctrl+F3` (or `ESC`).
+8.  **Pause/resume** with `Ctrl+F4`; **Stop** with `Ctrl+F3` (or `ESC` for emergency stop).
 
 ---
 
