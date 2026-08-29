@@ -1,19 +1,20 @@
 {
-  "version": "2.2.0",
+  "version": "2.3.0",
   "run_mode": "limited",
   "repetitions": 5,
   "safe_mode": true,
   "humanize": false,
+  "waitcolor_timeout": 30,
   "accent": "Purple",
   "rows": [
-    { "key": "moveto(150,300)", "hold": "0.0", "delay": "0.5", "enabled": true },
-    { "key": "click(150,300)", "hold": "0.0", "delay": "0.7", "enabled": true },
-    { "key": "ifcolor(255,0,0,50,50)", "hold": "0.0", "delay": "0.1", "enabled": true },
-    { "key": "space", "hold": "0.0", "delay": "0.5", "enabled": true },
-    { "key": "repeat(3)", "hold": "0.0", "delay": "0.0", "enabled": true },
-    { "key": "w", "hold": "1.2", "delay": "0.3-0.8", "enabled": true },
-    { "key": "endrepeat", "hold": "0.0", "delay": "0.0", "enabled": true },
-    { "key": "Hello!", "hold": "0.0", "delay": "0.8", "enabled": true },
-    { "key": "enter", "hold": "0.0", "delay": "0.5", "enabled": true }
+    { "key": "moveto(150,300)", "hold": "0.0", "delay": "0.5", "times": "1", "enabled": true },
+    { "key": "click(150,300)", "hold": "0.0", "delay": "0.7", "times": "3", "enabled": true },
+    { "key": "ifcolor(255,0,0,50,50)", "hold": "0.0", "delay": "0.1", "times": "1", "enabled": true },
+    { "key": "space", "hold": "0.0", "delay": "0.5", "times": "1", "enabled": true },
+    { "key": "repeat(3)", "hold": "0.0", "delay": "0.0", "times": "1", "enabled": true },
+    { "key": "w", "hold": "1.2", "delay": "0.3-0.8", "times": "1", "enabled": true },
+    { "key": "endrepeat", "hold": "0.0", "delay": "0.0", "times": "1", "enabled": true },
+    { "key": "Hello!", "hold": "0.0", "delay": "0.8", "times": "1", "enabled": true },
+    { "key": "enter", "hold": "0.0", "delay": "0.5", "times": "1", "enabled": true }
   ]
 }

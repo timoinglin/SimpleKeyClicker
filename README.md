@@ -10,37 +10,51 @@ A powerful and user-friendly GUI automation tool for simulating keyboard and mou
 
 ![SimpleKeyClicker Screenshot](images/screenshot.jpg)
 
-## ✨ Features
+## Features
 
-- 🎮 **Game-Reliable Input**: Mouse and keyboard actions are sent via **PyDirectInput** (SendInput / scancodes) so clicks, moves and drags register inside games
-- 🎮 **Action Sequencing**: Create and run sequences of keyboard presses and mouse actions
-- 🔁 **Control Flow**: `repeat(N)` … `endrepeat` blocks and `ifcolor` / `ifnotcolor` conditionals
-- ☑️ **Per-Action Enable/Disable**: Mute any row without deleting it — great for tuning macros
-- ⏱️ **Customizable Timing**: Set delays after each action and hold durations, plus random delay ranges (`0.3-0.8`)
-- 🧍 **Humanize Movement**: Optional curved, eased, jittered mouse paths instead of instant teleports
-- 🔄 **Repetition Control**: Run sequences indefinitely or for a specific number of times
-- 📊 **Live Stats**: Loop/action counters, elapsed time, CPS, and an ETA + progress bar for limited runs
-- ⏯️ **Pause / Resume**: Pause mid-sequence and resume from the same step (keeps your place)
-- 🌙 **Modern Dark UI**: Sleek dark theme with **7 selectable accent colors** and an always-on-top pin
-- 🖱️ **Advanced Mouse Control**: Click, move and drag at specific coordinates
-- 🎯 **Coordinate/Color Capture**: Built-in tool to capture mouse position and pixel color
-- 🎨 **Color Detection**: Wait for / branch on specific colors at designated coordinates
-- 💾 **Save/Load + Auto-Restore**: Export sequences as JSON, and your last session auto-restores on launch
-- 🛡️ **Safety Features**: Safe Mode blocks dangerous keys; customizable emergency stop
-- ✅ **Inline Validation**: Invalid timing/action fields are flagged with a red border before you run
-- ⌨️ **Global Hotkeys**: Start, Pause, Stop and Emergency Stop — all fully customizable
+**Input that registers in games**
+- Actions are sent via **PyDirectInput** (SendInput / scancodes), so clicks, moves and drags work inside games
+- Click, move and drag at exact screen coordinates
+- **Humanize**: optional curved, eased, jittered mouse paths instead of instant teleports
 
-## 📥 Download
+**Sequences**
+- Build a list of actions and run it top to bottom
+- **Times**: repeat a single row N times before moving to the next one
+- `repeat(N)` … `endrepeat` blocks (nestable) to repeat a group of rows
+- `ifcolor` / `ifnotcolor` conditionals
+- Enable or disable any row without deleting it
+
+**Timing**
+- Hold duration and delay per action, including random ranges like `0.3-0.8`
+- Run the sequence indefinitely or a set number of times
+- Configurable color-wait timeout — including **wait forever**
+
+**Color**
+- Capture coordinates and pixel color with a single click
+- `waitcolor` blocks until a color appears; `ifcolor` / `ifnotcolor` branch on it
+
+**While it runs**
+- Live loop and action counters, elapsed time, CPS, plus ETA and a progress bar for limited runs
+- Pause and resume from the same step
+- Global hotkeys for Start, Pause, Stop and Emergency Stop — all customizable
+
+**Everyday comfort**
+- Modern dark UI with 7 selectable accent colors and an always-on-top pin
+- Save and load sequences as JSON; your last session auto-restores on launch
+- Inline validation flags bad timing/action fields before you run
+- Safe Mode blocks dangerous keys by default
+
+## Download
 
 **[Download the latest Windows EXE here](https://github.com/timoinglin/SimpleKeyClicker/releases/latest)**
 
 Or build from source (see below).
 
-> 💛 **Using SimpleKeyClicker?** It's free and open-source, built and maintained in spare time. If it's saved you time on repetitive input tasks — or you'd like to see it keep growing — a coffee genuinely helps. See [Support the Project](#-support-the-project).
+> 💛 **Using SimpleKeyClicker?** It's free and open-source, built and maintained in spare time. If it's saved you time on repetitive input tasks — or you'd like to see it keep growing — a coffee genuinely helps. See [Support the Project](#support-the-project).
 >
 > [![Support the project on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/kneuma)
 
-## 🚀 Installation
+## Installation
 
 ### Prerequisites
 - Python 3.8+
@@ -72,7 +86,7 @@ Or build from source (see below).
    python main.py
    ```
 
-## 🔨 Building the EXE
+## Building the EXE
 
 To create a standalone executable:
 
@@ -83,7 +97,7 @@ pyinstaller --onefile --windowed --icon=logo.ico --add-data "logo.ico;." --add-d
 
 The EXE will be created in the `dist/` folder.
 
-## 📖 Quick Start
+## Quick Start
 
 1. Click **"+ Add Action"** to create steps for your sequence
 2. For each row:
@@ -91,13 +105,14 @@ The EXE will be created in the `dist/` folder.
    - Use the **🎯** button to capture coordinates/colors
    - Set **Hold Time** (how long to hold the key/button)
    - Set **Delay** (pause after the action; supports ranges like `0.3-0.8`)
+   - Set **Times** (how often this row repeats before the next one; default `1`)
    - Untick the **checkbox** to temporarily skip a row
 3. Use **▲ ▼ ❏ ✕** buttons to organize rows
 4. Select run mode: **Indefinitely** or **X Times**
 5. Click **▶ START** or press `Ctrl+F2`
 6. **⏸ PAUSE** (`Ctrl+F4`) to pause/resume, **⏹ STOP** (`Ctrl+F3`) or `ESC` to halt
 
-## ⌨️ Available Actions
+## Available Actions
 
 ### Keyboard
 | Action | Description |
@@ -125,6 +140,8 @@ The EXE will be created in the `dist/` folder.
 | Action | Description |
 |--------|-------------|
 | `waitcolor(r,g,b,x,y)` | Wait until color RGB appears at (x,y) |
+| `waitcolor(r,g,b,x,y,120)` | Same, but give up after 120 seconds |
+| `waitcolor(r,g,b,x,y,0)` | Same, but wait **forever** |
 | `ifcolor(r,g,b,x,y)` | Run the **next** row only if the color matches |
 | `ifnotcolor(r,g,b,x,y)` | Run the **next** row only if the color is absent |
 
@@ -140,7 +157,23 @@ The EXE will be created in the `dist/` folder.
 | `0.5` | Fixed delay in seconds |
 | `0.3-0.8` | Random delay between min and max |
 
-## 🛡️ Safety Features
+### Row Repeats (Times)
+| Value | Description |
+|-------|-------------|
+| `1` | Run the row once — the default |
+| `25` | Run the row 25 times before moving to the next row |
+
+Times applies to a single row, `repeat(N)` … `endrepeat` applies to a block of rows — and they nest, so a `Times: 3` row inside `repeat(2)` fires six times per pass. The row's Delay is applied after every repeat.
+
+## Waiting for a Color
+
+`waitcolor` blocks the sequence until the color shows up at those coordinates. By default it gives up after **30 seconds** and stops the run.
+
+If you're waiting for something that may take hours — a popup, a queue, a respawn — open **⚙ Settings → Color wait** and set it to `0`. The sequence will then wait as long as it takes. A single action can override the setting with a sixth value: `waitcolor(r,g,b,x,y,600)` for ten minutes, `waitcolor(r,g,b,x,y,0)` for forever.
+
+While it waits, `Ctrl+F3` (Stop) and `ESC` (Emergency Stop) still work — an endless wait is always interruptible.
+
+## Safety Features
 
 ### Safe Mode (On by default)
 - Blocks potentially dangerous keys: `alt`, `ctrl`, `shift`, `win`, `f4`, `delete`, `tab`
@@ -159,21 +192,21 @@ The EXE will be created in the `dist/` folder.
 
 > All hotkeys are fully customizable. Click **⚙ Settings** in the header to open the keybind editor, then click **⏺ Record** next to any hotkey and press your preferred key combination. Changes take effect immediately and are saved/loaded with your configuration files.
 
-## 📦 Requirements
+## Requirements
 
 - Python 3.8+
-- customtkinter>=5.2.0
+- customtkinter>=5.2.0,<7
 - keyboard>=0.13.5
 - PyDirectInput>=1.0.4
 - pyautogui>=0.9.54
 - Pillow>=10.0.0
 - pynput>=1.8.1
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Feel free to submit issues and pull requests.
 
-## 💛 Support the Project
+## Support the Project
 
 This project is free and open-source, built and maintained in spare time. If SimpleKeyClicker has saved you time — or you'd just like to see it keep growing — a coffee is hugely appreciated and helps keep this and other free tools maintained and improving.
 
@@ -181,13 +214,13 @@ This project is free and open-source, built and maintained in spare time. If Sim
 
 Every contribution also funds more free open-source tools — thank you! 💛
 
-## 📄 License
+## License
 
 MIT License - Copyright (c) 2025 Timo Inglin
 
 See [LICENSE](LICENSE) for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Modern UI built with **CustomTkinter**
 - Input simulation by **PyDirectInput** and **PyAutoGUI**

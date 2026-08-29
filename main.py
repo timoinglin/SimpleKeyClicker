@@ -76,7 +76,7 @@ def settings_path():
 
 # App constants
 TOOL_NAME = "SimpleKeyClicker"
-VERSION = "2.2.0"
+VERSION = "2.3.0"
 ICON_PATH = resource_path("logo.ico")
 LOGO_PATH = resource_path("logo.png")
 
@@ -138,7 +138,7 @@ class ModernActionRow(ctk.CTkFrame):
     """A single action row with modern styling."""
 
     def __init__(self, parent, app, key="", hold="0.0", delay="0.5",
-                 enabled=True, is_first=False, **kwargs):
+                 times="1", enabled=True, is_first=False, **kwargs):
         super().__init__(parent, fg_color=COLORS["bg_card"], corner_radius=12, **kwargs)
         self.app = app
         self.is_first = is_first
@@ -148,6 +148,7 @@ class ModernActionRow(ctk.CTkFrame):
         self.key_var = ctk.StringVar(value=key)
         self.hold_var = ctk.StringVar(value=hold)
         self.delay_var = ctk.StringVar(value=delay)
+        self.times_var = ctk.StringVar(value=times)
         self.enabled_var = ctk.BooleanVar(value=bool(enabled))
 
         self._create_widgets()
@@ -210,13 +211,22 @@ class ModernActionRow(ctk.CTkFrame):
         self.hold_entry.pack()
 
         delay_frame = ctk.CTkFrame(timing_frame, fg_color="transparent")
-        delay_frame.pack(side="left")
+        delay_frame.pack(side="left", padx=(0, 12))
         ctk.CTkLabel(delay_frame, text="Delay (s)", font=("Segoe UI", 11),
                      text_color=COLORS["text_dim"]).pack(anchor="w")
         self.delay_entry = ctk.CTkEntry(delay_frame, textvariable=self.delay_var, width=70,
                                         height=36, corner_radius=8, font=("Segoe UI", 13),
                                         border_color=COLORS["border"])
         self.delay_entry.pack()
+
+        times_frame = ctk.CTkFrame(timing_frame, fg_color="transparent")
+        times_frame.pack(side="left")
+        ctk.CTkLabel(times_frame, text="Times", font=("Segoe UI", 11),
+                     text_color=COLORS["text_dim"]).pack(anchor="w")
+        self.times_entry = ctk.CTkEntry(times_frame, textvariable=self.times_var, width=60,
+                                        height=36, corner_radius=8, font=("Segoe UI", 13),
+                                        border_color=COLORS["border"])
+        self.times_entry.pack()
 
         # Action buttons (right side)
         btn_frame = ctk.CTkFrame(container, fg_color="transparent")
@@ -246,7 +256,8 @@ class ModernActionRow(ctk.CTkFrame):
         # Live validation
         for entry, var in ((self.key_entry, self.key_var),
                            (self.hold_entry, self.hold_var),
-                           (self.delay_entry, self.delay_var)):
+                           (self.delay_entry, self.delay_var),
+                           (self.times_entry, self.times_var)):
             entry.bind("<KeyRelease>", self._validate)
             entry.bind("<FocusOut>", self._validate)
 
@@ -297,6 +308,13 @@ class ModernActionRow(ctk.CTkFrame):
         except Exception:
             self.delay_entry.configure(border_color=COLORS["danger"])
             ok = False
+        # Times (how often this single row repeats before moving on)
+        try:
+            KeyClickerApp._parse_times(self.times_var.get())
+            self.times_entry.configure(border_color=COLORS["border"])
+        except Exception:
+            self.times_entry.configure(border_color=COLORS["danger"])
+            ok = False
         # Action text
         if self.key_var.get().strip():
             self.key_entry.configure(border_color=COLORS["border"])
@@ -319,6 +337,7 @@ class ModernActionRow(ctk.CTkFrame):
             "key": self.key_var.get(),
             "hold": self.hold_var.get(),
             "delay": self.delay_var.get(),
+            "times": self.times_var.get(),
             "enabled": bool(self.enabled_var.get()),
         }
 
@@ -334,6 +353,9 @@ class KeyClickerApp(ctk.CTk):
         self.paused = False
         self.safe_mode = True
         self.humanize = False
+        # Seconds a waitcolor may block; 0 = wait forever. Plain float, never a
+        # Tk var: the worker thread reads it.
+        self.waitcolor_timeout = float(WAITCOLOR_TIMEOUT)
         self.rows = []
         self.thread = None
         self._start_lock = threading.Lock()
@@ -579,9 +601,9 @@ class KeyClickerApp(ctk.CTk):
         self.pin_btn.configure(fg_color=COLORS["accent"] if self.always_on_top else COLORS["bg_card"])
 
     # ------------------------------------------------------------------- rows
-    def add_row(self, is_first=False, key="", hold="0.0", delay="0.5", enabled=True):
+    def add_row(self, is_first=False, key="", hold="0.0", delay="0.5", times="1", enabled=True):
         row = ModernActionRow(self.rows_frame, self, key=key, hold=hold, delay=delay,
-                              enabled=enabled, is_first=is_first)
+                              times=times, enabled=enabled, is_first=is_first)
         row.pack(fill="x", pady=5)
         self.rows.append(row)
         self._update_row_buttons()
@@ -695,6 +717,7 @@ class KeyClickerApp(ctk.CTk):
             "key": row.key_var.get().strip(),
             "hold": row.hold_var.get(),
             "delay": row.delay_var.get(),
+            "times": row.times_var.get(),
             "enabled": bool(row.enabled_var.get()),
         } for row in self.rows]
 
@@ -894,11 +917,21 @@ class KeyClickerApp(ctk.CTk):
                 hold = float(act["hold"])
             except Exception:
                 hold = 0.0
-            if not self._perform_action(key, hold):
-                self.running = False
+            try:
+                times = self._parse_times(act.get("times", "1"))
+            except Exception:
+                times = 1
+            for _ in range(times):
+                self._wait_if_paused()
+                if not self.running:
+                    break
+                if not self._perform_action(key, hold):
+                    self.running = False
+                    break
+                self._stat_actions += 1
+                self._apply_delay(act)
+            if not self.running:
                 break
-            self._stat_actions += 1
-            self._apply_delay(act)
             i += 1
 
     def _wait_if_paused(self):
@@ -1008,8 +1041,10 @@ class KeyClickerApp(ctk.CTk):
                     return True
 
                 if cmd == 'waitcolor':
-                    r, g, b, x, y = map(int, args)
-                    return self._wait_for_color(r, g, b, x, y)
+                    # Optional 6th arg overrides the Settings timeout; 0 = forever.
+                    r, g, b, x, y = map(int, args[:5])
+                    timeout = self._parse_timeout(args[5]) if len(args) > 5 else None
+                    return self._wait_for_color(r, g, b, x, y, timeout)
 
                 if cmd == 'drag':
                     x1, y1, x2, y2 = map(int, args)
@@ -1076,15 +1111,23 @@ class KeyClickerApp(ctk.CTk):
         except Exception:
             return False
 
-    def _wait_for_color(self, r, g, b, x, y, timeout=WAITCOLOR_TIMEOUT):
+    def _wait_for_color(self, r, g, b, x, y, timeout=None):
+        """Poll a pixel until it matches. `timeout` <= 0 waits forever — the run
+        then ends only when the color appears or the user stops it. `None` uses
+        the timeout from Settings."""
+        if timeout is None:
+            timeout = self.waitcolor_timeout
+        forever = timeout <= 0
         start = time.time()
-        while time.time() - start < timeout:
+        while self.running and (forever or time.time() - start < timeout):
+            self._wait_if_paused()
             if not self.running:
                 return False
-            self._wait_if_paused()
             if self._check_color(r, g, b, x, y):
                 return True
             time.sleep(0.05)
+        if not self.running:
+            return False
         self.after(0, lambda: self._toast(f"Color not found at ({x},{y})", "danger"))
         return False
 
@@ -1099,6 +1142,37 @@ class KeyClickerApp(ctk.CTk):
                 lo, hi = hi, lo
             return random.uniform(lo, hi)
         return float(value)
+
+    @staticmethod
+    def _parse_timeout(value):
+        """Parse a color-wait timeout in seconds. 0 (or 'off'/'forever') means
+        wait forever; blank falls back to the built-in default."""
+        text = str(value).strip().lower()
+        if not text:
+            return float(WAITCOLOR_TIMEOUT)
+        if text in {'off', 'forever', 'none', 'inf', 'infinite'}:
+            return 0.0
+        secs = float(text)
+        if secs < 0:
+            raise ValueError("timeout cannot be negative")
+        return secs
+
+    @staticmethod
+    def _format_timeout(secs):
+        """Render a timeout for the Settings entry: 30.0 -> '30', 2.5 -> '2.5'."""
+        secs = float(secs)
+        return str(int(secs)) if secs == int(secs) else str(secs)
+
+    @staticmethod
+    def _parse_times(value):
+        """Parse a row's repeat count: a whole number >= 1 (blank means 1)."""
+        value = str(value).strip()
+        if not value:
+            return 1
+        count = int(value)
+        if count < 1:
+            raise ValueError("times must be at least 1")
+        return count
 
     # ------------------------------------------------------------------- capture
     def start_capture(self, key_var):
@@ -1174,7 +1248,7 @@ class KeyClickerApp(ctk.CTk):
 
     # ------------------------------------------------------------------- settings dialog
     def show_settings(self):
-        dialog = self._make_dialog("Settings", "500x560", grab=True)
+        dialog = self._make_dialog("Settings", "500x640", grab=True)
 
         ctk.CTkLabel(dialog, text="⚙  Settings", font=("Segoe UI", 20, "bold")).pack(pady=(20, 4))
         ctk.CTkLabel(dialog, text="Keybinds, theme and behaviour", font=("Segoe UI", 12),
@@ -1231,11 +1305,35 @@ class KeyClickerApp(ctk.CTk):
         accent_menu.set(self.accent_name)
         accent_menu.pack(side="left")
 
+        # --- Behaviour ---
+        behav_frame = ctk.CTkFrame(dialog, fg_color=COLORS["bg_card"], corner_radius=12)
+        behav_frame.pack(fill="x", padx=25, pady=(0, 12))
+        brow = ctk.CTkFrame(behav_frame, fg_color="transparent")
+        brow.pack(fill="x", padx=15, pady=(12, 4))
+        ctk.CTkLabel(brow, text="Color wait", font=("Segoe UI", 13, "bold"),
+                     width=130, anchor="w").pack(side="left")
+        timeout_var = ctk.StringVar(value=self._format_timeout(self.waitcolor_timeout))
+        timeout_entry = ctk.CTkEntry(brow, textvariable=timeout_var, width=90, height=34,
+                                     corner_radius=8, font=("Segoe UI", 13),
+                                     border_color=COLORS["border"])
+        timeout_entry.pack(side="left")
+        ctk.CTkLabel(brow, text="seconds", font=("Segoe UI", 12),
+                     text_color=COLORS["text_dim"]).pack(side="left", padx=(8, 0))
+        ctk.CTkLabel(behav_frame, text="How long waitcolor may block.  0 = wait forever.",
+                     font=("Segoe UI", 11), text_color=COLORS["text_dim"],
+                     wraplength=430, justify="left").pack(anchor="w", padx=15, pady=(0, 10))
+
         # --- Buttons ---
         btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
         btn_frame.pack(fill="x", padx=25, pady=18)
 
         def save():
+            try:
+                new_timeout = self._parse_timeout(timeout_var.get())
+            except Exception:
+                timeout_entry.configure(border_color=COLORS["danger"])
+                self._toast("Color wait must be 0 or more seconds.", "danger")
+                return
             prev = (self.hotkey_start.get(), self.hotkey_stop.get(),
                     self.hotkey_pause.get(), self.hotkey_emergency.get())
             self.hotkey_start.set(temp_vars["start"].get())
@@ -1251,6 +1349,7 @@ class KeyClickerApp(ctk.CTk):
                 self._rebind_hotkeys()
                 self._toast("Could not bind: " + ", ".join(failed) + ". Kept previous keybinds.", "danger")
                 return
+            self.waitcolor_timeout = new_timeout
             dialog.destroy()
             self._toast("Settings saved!", "success")
 
@@ -1259,6 +1358,8 @@ class KeyClickerApp(ctk.CTk):
             temp_vars["stop"].set("ctrl+f3")
             temp_vars["pause"].set("ctrl+f4")
             temp_vars["emergency"].set("esc")
+            timeout_var.set(self._format_timeout(WAITCOLOR_TIMEOUT))
+            timeout_entry.configure(border_color=COLORS["border"])
 
         btn_style = {"height": 40, "corner_radius": 10, "font": ("Segoe UI", 13)}
         ctk.CTkButton(btn_frame, text="Reset Defaults", width=130, fg_color=COLORS["bg_card"],
@@ -1345,6 +1446,7 @@ class KeyClickerApp(ctk.CTk):
             'hotkey_emergency': self.hotkey_emergency.get(),
             'safe_mode': self.safe_mode,
             'humanize': self.humanize,
+            'waitcolor_timeout': self.waitcolor_timeout,
             'accent': self.accent_name,
             'always_on_top': self.always_on_top,
         }
@@ -1378,6 +1480,10 @@ class KeyClickerApp(ctk.CTk):
         self.safe_mode = config.get('safe_mode', True)
         self.humanize = config.get('humanize', False)
         self.always_on_top = config.get('always_on_top', False)
+        try:
+            self.waitcolor_timeout = self._parse_timeout(config.get('waitcolor_timeout', WAITCOLOR_TIMEOUT))
+        except Exception:
+            self.waitcolor_timeout = float(WAITCOLOR_TIMEOUT)
 
     def _restore_session(self, config, restore_hotkeys=True):
         """Rebuild rows + state from a settings/config dict (handles legacy 'sleep')."""
@@ -1398,6 +1504,10 @@ class KeyClickerApp(ctk.CTk):
         # Reflect toggles in widgets
         self.safe_mode = config.get('safe_mode', self.safe_mode)
         self.humanize = config.get('humanize', self.humanize)
+        try:
+            self.waitcolor_timeout = self._parse_timeout(config.get('waitcolor_timeout', self.waitcolor_timeout))
+        except Exception:
+            pass
         try:
             self.safe_switch.select() if self.safe_mode else self.safe_switch.deselect()
             self.humanize_switch.select() if self.humanize else self.humanize_switch.deselect()
@@ -1422,6 +1532,7 @@ class KeyClickerApp(ctk.CTk):
                     key=data.get('key', ''),
                     hold=data.get('hold', '0.0'),
                     delay=data.get('delay', data.get('sleep', '0.5')),
+                    times=str(data.get('times', '1')),
                     enabled=data.get('enabled', True),
                 )
 
@@ -1481,6 +1592,8 @@ class KeyClickerApp(ctk.CTk):
         section("🎨  Color & Conditions")
         c = card()
         line(c, "waitcolor(r,g,b,x,y)", "Wait until color appears at (x,y)")
+        line(c, "waitcolor(…,x,y,120)", "…but give up after 120 s")
+        line(c, "waitcolor(…,x,y,0)", "…or wait forever (stop with the hotkey)")
         line(c, "ifcolor(r,g,b,x,y)", "Run next row only if color matches")
         line(c, "ifnotcolor(r,g,b,x,y)", "Run next row only if color is absent")
 
@@ -1494,6 +1607,12 @@ class KeyClickerApp(ctk.CTk):
         line(c, "0.5", "Fixed delay (seconds)")
         line(c, "0.3-0.8", "Random delay between min and max")
 
+        section("🔢  Times")
+        c = card()
+        line(c, "Times = 1", "Run this row once (default)")
+        line(c, "Times = 25", "Repeat this row 25× before the next row")
+        line(c, "", "Delay is applied after every repeat")
+
         section("💡  Tips")
         tips_card = ctk.CTkFrame(scroll, fg_color=COLORS["bg_card"], corner_radius=10)
         tips_card.pack(fill="x", padx=8, pady=2)
@@ -1503,6 +1622,7 @@ class KeyClickerApp(ctk.CTk):
             ("🧍", "Humanize adds curved, jittered mouse moves"),
             ("⏸", "Pause/resume keeps your place in the sequence"),
             ("🛡", "Safe Mode blocks dangerous keys (ctrl, alt …)"),
+            ("⏳", "Settings → Color wait: 0 waits forever for a color"),
             ("💾", "Your session auto-restores on next launch"),
         ]
         for icon, tip in tips:
